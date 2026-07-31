@@ -86,7 +86,11 @@ python main.py
 3. Click **Disconnect** to stop. The recorded data is kept for offline inspection.
 
 ### Live plot
-- **Channel** dropdown — choose which channel is displayed.
+- **Channel** dropdown — choose which of the 32 channels is displayed. Below a
+  separator there is one decorative entry, **67**, which shows an animated
+  credit trace instead of data. It is handled entirely in the View, never
+  reaches the ViewModel or the TCP model, and does not alter the 32-channel
+  pipeline in any way.
 - **Mode** dropdown — `original`, `rms`, or `filtered`.
 - **Y scale** — sets the visible vertical range to ±(Y scale). The axis is
   deliberately *not* auto-fitted to the data min/max: a single artefact
@@ -101,7 +105,12 @@ python main.py
 1. **Disconnect** (or let the stream finish).
 2. Click **Open Offline Plot**.
 3. In the offline window, use the **Channel** and **Mode** dropdowns to inspect
-   the full recording. This view is static and redraws on selection change.
+   the full recording.
+
+The offline view is a **snapshot** of the recording taken when the window is
+opened, not a live view. If streaming continues afterwards, press **Refresh**
+(or change a dropdown) to re-read the buffer. Inspecting after disconnecting
+therefore shows the complete recording.
 
 ---
 

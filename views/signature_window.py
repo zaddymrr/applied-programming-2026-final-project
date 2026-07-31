@@ -20,6 +20,50 @@ from matplotlib.textpath import TextPath
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 HANDLE = "@zaddymrr"
+SUBTITLE = "on instagram"
+
+
+def build_credit_traces():
+    """
+    Build the two-line credit artwork as a list of (N, 2) stroke arrays.
+
+    Line 1 is the handle, line 2 the subtitle, with a divider rule between
+    them. Everything is derived from font outlines - there is no measured
+    data anywhere in this function.
+    """
+    top = _text_to_traces(HANDLE, size=1.0)
+    bottom = _text_to_traces(SUBTITLE, size=0.55)
+
+    top_pts = np.concatenate(top, axis=0)
+    bottom_pts = np.concatenate(bottom, axis=0)
+
+    top_width = top_pts[:, 0].max() - top_pts[:, 0].min()
+    bottom_width = bottom_pts[:, 0].max() - bottom_pts[:, 0].min()
+
+    # Centre both lines horizontally and stack them vertically.
+    top_shift = -top_pts[:, 0].min() - top_width / 2.0
+    bottom_shift = -bottom_pts[:, 0].min() - bottom_width / 2.0
+    drop = 1.05
+
+    traces = []
+    for stroke in top:
+        s = stroke.copy()
+        s[:, 0] += top_shift
+        traces.append(s)
+    for stroke in bottom:
+        s = stroke.copy()
+        s[:, 0] += bottom_shift
+        s[:, 1] -= drop
+        traces.append(s)
+
+    # Divider rule between the two lines.
+    rule_half = 0.5 * max(top_width, bottom_width) * 0.92
+    rule_y = -drop + 0.62
+    traces.append(
+        np.array([[-rule_half, rule_y], [rule_half, rule_y]], dtype=float)
+    )
+
+    return traces
 
 
 def _text_to_traces(text, size=1.0):

@@ -1,4 +1,5 @@
 import numpy as np
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 from vispy import scene
 
@@ -80,6 +81,31 @@ class VisPyPlotWidget(QWidget):
 
         layout.addWidget(self.canvas.native)
 
+        # ------------------------------------------------------------------
+        # Decorative easter-egg layer.
+        #
+        # Entirely separate from the signal pipeline: it draws glyph outlines
+        # generated from a font, never touches the TCP model or the 32-channel
+        # buffers, and is driven by its own timer. Deleting this block and the
+        # two methods at the end of the class would leave the application
+        # behaviour unchanged.
+        # ------------------------------------------------------------------
+        self.easter_egg_active = False
+        self._egg_base = None
+        self._egg_lines = []
+        for _ in range(40):
+            ln = scene.Line(
+                pos=np.array([[0.0, 0.0], [1.0, 0.0]], dtype=float),
+                color=(0.42, 0.66, 0.98, 1.0),
+                parent=self.view.scene,
+                width=2,
+            )
+            ln.visible = False
+            self._egg_lines.append(ln)
+
+        self._egg_timer = QTimer(self)
+        self._egg_timer.timeout.connect(self._animate_easter_egg)
+
     # ------------------------------------------------------------------
     def _build_colors(self, n):
         """Generate n distinct-ish colors cycling through hues."""
@@ -111,6 +137,13 @@ class VisPyPlotWidget(QWidget):
     def set_show_all(self, show_all):
         """Switch between single-channel and all-channels rendering."""
         self.show_all = bool(show_all)
+
+        # While the decorative trace is showing it owns the canvas: record the
+        # requested mode but do not un-hide the signal lines, otherwise both
+        # layers would be drawn on top of each other.
+        if self.easter_egg_active:
+            return
+
         self.line.visible = not self.show_all
         for ln in self.channel_lines:
             ln.visible = self.show_all
@@ -119,7 +152,7 @@ class VisPyPlotWidget(QWidget):
     # ------------------------------------------------------------------
     def update_plot(self, x, y):
         """Update the single-channel line (called when show_all is False)."""
-        if self.show_all:
+        if self.show_all or self.easter_egg_active:
             return
         x = np.asarray(x, dtype=float)
         y = np.asarray(y, dtype=float)
@@ -162,7 +195,7 @@ class VisPyPlotWidget(QWidget):
         ``matrix`` is shaped channels x samples. Each channel is drawn with a
         vertical offset so the lines don't overlap.
         """
-        if not self.show_all:
+        if not self.show_all or self.easter_egg_active:
             return
         matrix = np.asarray(matrix, dtype=float)
         if matrix.ndim != 2 or matrix.shape[1] < 2:
@@ -200,3 +233,67 @@ class VisPyPlotWidget(QWidget):
                 y=(-self.y_scale, self.y_scale),
                 margin=0.02,
             )
+
+    # ----------------------------------------------------------------------
+    # Decorative easter egg (not part of the signal pipeline)
+    # ----------------------------------------------------------------------
+    def set_easter_egg(self, active):
+        """
+        Show or hide the decorative credit trace.
+
+        While active, the normal signal line is hidden and an independent
+        timer animates the glyph outlines so they behave like a live trace.
+        No measured data is involved.
+        """
+        from views.signature_window import build_credit_traces
+
+        self.easter_egg_active = bool(active)
+
+        if self.easter_egg_active:
+            self._egg_base = build_credit_traces()
+            self.line.visible = False
+            for ln in self.channel_lines:
+                ln.visible = False
+            for i, ln in enumerate(self._egg_lines):
+                ln.visible = i < len(self._egg_base)
+            self._animate_easter_egg()
+            self._egg_timer.start(40)  # ~25 fps is plenty for this
+        else:
+            self._egg_timer.stop()
+            self._egg_base = None
+            for ln in self._egg_lines:
+                ln.visible = False
+            self.line.visible = not self.show_all
+            for ln in self.channel_lines:
+                ln.visible = self.show_all
+            # Restore a sensible axis range. Without this the camera keeps the
+            # range left behind by the decorative view, which is visible if no
+            # data arrives to redraw it.
+            self._update_camera()
+
+    def _animate_easter_egg(self):
+        """Redraw the credit trace with a small random jitter each frame."""
+        if not self.easter_egg_active or not self._egg_base:
+            return
+
+        all_pts = np.concatenate(self._egg_base, axis=0)
+        span_y = float(all_pts[:, 1].max() - all_pts[:, 1].min()) or 1.0
+        amplitude = 0.012 * span_y
+
+        for i, stroke in enumerate(self._egg_base):
+            jittered = stroke.copy()
+            jittered[:, 1] += np.random.uniform(
+                -amplitude, amplitude, size=stroke.shape[0]
+            )
+            jittered[:, 0] += np.random.uniform(
+                -amplitude * 0.4, amplitude * 0.4, size=stroke.shape[0]
+            )
+            self._egg_lines[i].set_data(pos=jittered)
+
+        pad_x = 0.05 * (all_pts[:, 0].max() - all_pts[:, 0].min() + 1e-9)
+        pad_y = 0.35 * span_y
+        self.view.camera.set_range(
+            x=(float(all_pts[:, 0].min()) - pad_x, float(all_pts[:, 0].max()) + pad_x),
+            y=(float(all_pts[:, 1].min()) - pad_y, float(all_pts[:, 1].max()) + pad_y),
+            margin=0.02,
+        )

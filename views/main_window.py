@@ -93,6 +93,10 @@ class MainWindow(QMainWindow):
         self.channel_box.addItems(
             [str(i + 1) for i in range(view_model.channels)]
         )
+        # Decorative entry, kept below a separator so it is clearly distinct
+        # from the 32 real acquisition channels.
+        self.channel_box.insertSeparator(view_model.channels)
+        self.channel_box.addItem("67")
         control_row.addWidget(self.channel_box)
 
         control_row.addWidget(QLabel("Mode:"))
@@ -135,7 +139,7 @@ class MainWindow(QMainWindow):
         # --- wire user actions to the ViewModel --------------------------
         self.connect_button.clicked.connect(self._on_connect)
         self.disconnect_button.clicked.connect(self._on_disconnect)
-        self.channel_box.currentIndexChanged.connect(self.view_model.set_channel)
+        self.channel_box.currentIndexChanged.connect(self._on_channel_changed)
         self.mode_box.currentTextChanged.connect(self.view_model.set_mode)
         self.y_scale_input.valueChanged.connect(self.plot_widget.set_y_scale)
         self.autofit_button.clicked.connect(self._on_autofit)
@@ -164,6 +168,13 @@ class MainWindow(QMainWindow):
         self.port_input.setEnabled(not connected)
 
     def _on_plot_all_toggled(self, checked):
+        # The decorative trace owns the canvas while it is showing; ignore the
+        # toggle rather than recording a mode that would be restored later.
+        if self.plot_widget.easter_egg_active:
+            if checked:
+                self.plot_all_button.setChecked(False)
+            return
+
         self.view_model.set_show_all_channels(checked)
         self.plot_widget.set_show_all(checked)
         self.plot_all_button.setText(
@@ -171,6 +182,30 @@ class MainWindow(QMainWindow):
         )
         self.channel_box.setEnabled(not checked)
         self.y_scale_input.setEnabled(not checked)
+
+    def _on_channel_changed(self, index):
+        """
+        Handle channel selection.
+
+        Indices 0-31 are the real acquisition channels and are forwarded to
+        the ViewModel. The decorative "67" entry is handled purely in the
+        View and never reaches the ViewModel or the data pipeline.
+        """
+        if self.channel_box.itemText(index) == "67":
+            # Leave the all-channel view first, so the two layers can never
+            # be drawn on top of each other.
+            if self.plot_all_button.isChecked():
+                self.plot_all_button.setChecked(False)
+            self.plot_all_button.setEnabled(False)
+            self.y_scale_input.setEnabled(False)
+            self.plot_widget.set_easter_egg(True)
+            self.status_label.setText("@zaddymrr on instagram")
+            return
+
+        self.plot_widget.set_easter_egg(False)
+        self.plot_all_button.setEnabled(True)
+        self.y_scale_input.setEnabled(True)
+        self.view_model.set_channel(index)
 
     def _on_autofit(self):
         """Set the Y scale to a robust fit of the current channel's data."""
