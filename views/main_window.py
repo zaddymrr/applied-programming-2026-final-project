@@ -132,6 +132,7 @@ class MainWindow(QMainWindow):
         self.plot_widget = VisPyPlotWidget(
             visible_duration_seconds=10.0,
             num_channels=view_model.channels,
+            sampling_rate=view_model.sampling_rate,
         )
         self.plot_widget.set_y_scale(self.y_scale_input.value())
         root.addWidget(self.plot_widget, stretch=1)

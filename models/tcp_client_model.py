@@ -88,7 +88,13 @@ class TcpClientModel:
         self.total_samples_received = 0
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((self.host, self.port))
+        try:
+            self.socket.connect((self.host, self.port))
+        except OSError:
+            # Do not leave a half-open socket behind on a failed attempt.
+            self.socket.close()
+            self.socket = None
+            raise
         self.socket.setblocking(False)
         self.is_connected = True
 

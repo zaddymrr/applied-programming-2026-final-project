@@ -1,3 +1,4 @@
+import numpy as np
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from PySide6.QtWidgets import (
@@ -112,8 +113,6 @@ class OfflinePlotWindow(QWidget):
         coordinates come from font glyph outlines with a small random jitter
         so it reads like a trace rather than flat text.
         """
-        import numpy as np
-
         from views.signature_window import build_credit_traces
 
         traces = build_credit_traces()

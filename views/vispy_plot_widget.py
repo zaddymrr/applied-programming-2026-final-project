@@ -18,11 +18,16 @@ class VisPyPlotWidget(QWidget):
     happens in the ViewModel / Models.
     """
 
-    def __init__(self, visible_duration_seconds=10.0, num_channels=32):
+    def __init__(
+        self, visible_duration_seconds=10.0, num_channels=32, sampling_rate=2000
+    ):
         super().__init__()
 
         self.visible_duration_seconds = visible_duration_seconds
         self.num_channels = num_channels
+        # Passed in rather than hardcoded, so the widget cannot desync from
+        # the rate the model is actually using.
+        self.sampling_rate = sampling_rate
         self.y_scale = 1.0
         self.show_all = False
         self._last_y = None
@@ -42,14 +47,16 @@ class VisPyPlotWidget(QWidget):
 
         self.y_axis = scene.AxisWidget(
             orientation="left", text_color="#cdd6f4", axis_color="#cdd6f4",
-            tick_color="#cdd6f4",
+            tick_color="#cdd6f4", axis_label="Amplitude",
+            axis_font_size=11, axis_label_margin=38,
         )
         self.x_axis = scene.AxisWidget(
             orientation="bottom", text_color="#cdd6f4", axis_color="#cdd6f4",
-            tick_color="#cdd6f4",
+            tick_color="#cdd6f4", axis_label="Time (s)",
+            axis_font_size=11, axis_label_margin=32,
         )
-        self.y_axis.width_max = 60
-        self.x_axis.height_max = 40
+        self.y_axis.width_max = 80
+        self.x_axis.height_max = 60
 
         grid.add_widget(self.y_axis, row=0, col=0)
         self.view = grid.add_view(row=0, col=1)
@@ -202,7 +209,7 @@ class VisPyPlotWidget(QWidget):
             return
 
         n_channels, n_samples = matrix.shape
-        x = np.arange(n_samples) / 2000.0  # sampling_rate = 2000
+        x = np.arange(n_samples) / float(self.sampling_rate)
 
         # Normalize each channel to a comparable amplitude, then offset.
         offsets = np.arange(n_channels)

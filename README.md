@@ -121,7 +121,7 @@ Documented so the choices can be reproduced and defended:
 | Parameter | Value |
 |-----------|-------|
 | Sampling rate | 2000 Hz (from the server device info) |
-| Bandpass filter | Butterworth, **4th order**, **20–450 Hz** |
+| Bandpass filter | Butterworth, **N = 4** (`scipy.signal.butter`), **20–450 Hz** |
 | Filter application | zero-phase, SOS form (`scipy.signal.sosfiltfilt`) |
 | RMS window | **50 ms** (100 samples at 2000 Hz), centred moving RMS |
 
@@ -130,6 +130,14 @@ motion artefacts and high-frequency noise while keeping the muscle activity. A
 zero-phase filter avoids shifting the signal in time. The RMS mode squares the
 filtered signal, applies a 50 ms moving average, and takes the square root to
 produce a smooth activation envelope.
+
+*On the filter order:* `N = 4` is the order passed to `scipy.signal.butter`,
+which is the usual way this is cited in the EMG literature. Because it is a
+**bandpass**, the realised filter has 2 x N = 8 poles (4 second-order sections),
+and `sosfiltfilt` applies it forward and backward, so the magnitude response is
+squared. The trade-off is deliberate: a steeper effective roll-off with no phase
+distortion, which matters because the bursts must stay aligned in time with the
+raw trace.
 
 ---
 

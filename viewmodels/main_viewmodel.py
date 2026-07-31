@@ -1,3 +1,4 @@
+import numpy as np
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from models.signal_processor import SignalProcessor
@@ -150,8 +151,6 @@ class MainViewModel(QObject):
         self.signal_time_updated.emit(self.model.get_signal_time_seconds())
 
     def _time_axis(self, n_samples):
-        import numpy as np
-
         return np.arange(n_samples) / self.sampling_rate
 
     # ------------------------------------------------------------------
@@ -166,8 +165,6 @@ class MainViewModel(QObject):
         Return (x, y) for one channel of the full recording, processed with
         the given mode. Used by the offline Matplotlib window.
         """
-        import numpy as np
-
         recording = self.model.get_full_recording()
         channel_index = int(channel_index) % self.channels
         channel = recording[channel_index, :]
