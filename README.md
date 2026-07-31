@@ -47,7 +47,9 @@ Requires **Python 3.10+**.
 pip install -r requirements.txt
 ```
 
-Dependencies (`requirements.txt`): `numpy`, `scipy`, `matplotlib`, `pyside6`, `vispy`.
+Dependencies (`requirements.txt`): `numpy`, `scipy`, `matplotlib`, `pyside6`,
+`PyOpenGL`, `vispy`. `PyOpenGL` is required by VisPy's OpenGL backend on a
+clean install.
 
 ---
 
@@ -111,7 +113,7 @@ Documented so the choices can be reproduced and defended:
 |-----------|-------|
 | Sampling rate | 2000 Hz (from the server device info) |
 | Bandpass filter | Butterworth, **4th order**, **20–450 Hz** |
-| Filter application | zero-phase (`scipy.signal.filtfilt`) |
+| Filter application | zero-phase, SOS form (`scipy.signal.sosfiltfilt`) |
 | RMS window | **50 ms** (100 samples at 2000 Hz), centred moving RMS |
 
 *Rationale:* 20–450 Hz is the standard surface-EMG band — it removes low-frequency
